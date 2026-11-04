@@ -23,6 +23,7 @@ ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,test
 
 
 INSTALLED_APPS = [
+    "rest_framework",
     "images",
 ]
 
@@ -61,3 +62,17 @@ STORAGES = {
 # Uploads larger than this spill from memory to a temp file on disk,
 # so a big upload doesn't sit entirely in RAM.
 FILE_UPLOAD_MAX_MEMORY_SIZE = 2 * 1024 * 1024
+
+
+# --- CONFIG for Django REST framework ---------------------------------------------------
+REST_FRAMEWORK = {
+    # JSON in, JSON out. The browsable HTML API is disabled: this is a
+    # machine-to-machine service.
+    "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
+    "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.MultiPartParser"],
+    # No authentication yet (this is a deliberate decision at this stage, will add soon). With no session
+    # authentication, DRF doesn't enforce CSRF, which only applies to cookies.
+    "DEFAULT_AUTHENTICATION_CLASSES": [],
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
+    "UNAUTHENTICATED_USER": None,
+}
