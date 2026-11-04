@@ -6,6 +6,7 @@ ImageField ignores the filename and Content-Type header and opens the
 bytes with Pillow, rejecting anything that isn't a real, intact image.
 We add the checks that are specific to this service on top.
 """
+from django.conf import settings
 from django.urls import reverse
 from rest_framework import serializers
 from rest_framework.exceptions import APIException
@@ -22,9 +23,14 @@ ALLOWED_FORMATS = {
     "WEBP": ("image/webp", "webp"),
 }
 
-
 # Custom exceptions let us return precise status codes instead of a generic
 # 400, so callers know whether to shrink the file or convert it.
+class ImageTooLarge(APIException):
+    status_code = 413
+    default_detail = "Image too large."
+    default_code = "image_too_large"
+
+
 class UnsupportedImageFormat(APIException):
     status_code = 415
     default_detail = "Image format not supported."
@@ -39,11 +45,22 @@ class ImageUploadSerializer(serializers.Serializer):
     file = serializers.ImageField()
 
     def validate_file(self, upload):
+        if upload.size > settings.PROGIMAGE_MAX_UPLOAD_BYTES:
+            raise ImageTooLarge(
+                f"File is {upload.size} bytes; the limit is "
+                f"{settings.PROGIMAGE_MAX_UPLOAD_BYTES} bytes."
+            )
+
         if upload.image.format not in ALLOWED_FORMATS:
             raise UnsupportedImageFormat(
                 f"Format {upload.image.format} is not accepted. "
                 f"Allowed: {', '.join(ALLOWED_FORMATS)}."
             )
+
+        # Guards against "decompression bombs"
+        width, height = upload.image.size
+        if width * height > settings.PROGIMAGE_MAX_PIXELS:
+            raise ImageTooLarge(f"Image is {width}x{height}; that is too many pixels.")
 
         # FUTURE: strip EXIF metadata (it can contain GPS location) if images
         # are ever served publicly, and malware-scan untrusted uploads.

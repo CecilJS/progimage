@@ -63,6 +63,12 @@ STORAGES = {
 # so a big upload doesn't sit entirely in RAM.
 FILE_UPLOAD_MAX_MEMORY_SIZE = 2 * 1024 * 1024
 
+# --- ProgImage limits -------------------------------------------------------
+PROGIMAGE_MAX_UPLOAD_BYTES = int(os.environ.get("PROGIMAGE_MAX_UPLOAD_BYTES", 10 * 1024 * 1024))
+# Guards against "decompression bombs": tiny files that declare enormous
+# dimensions and would exhaust memory if decoded.
+PROGIMAGE_MAX_PIXELS = int(os.environ.get("PROGIMAGE_MAX_PIXELS", 40_000_000))
+
 
 # --- CONFIG for Django REST framework ---------------------------------------------------
 REST_FRAMEWORK = {

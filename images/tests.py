@@ -131,3 +131,16 @@ class ValidationTests(APITestBase):
         resp = self.upload(data[: len(data) // 2])
         self.assertEqual(resp.status_code, 400)
         self.assertEqual(Image.objects.count(), 0)
+
+    def test_file_over_size_limit_rejected(self):
+        data = make_image()
+        with self.settings(PROGIMAGE_MAX_UPLOAD_BYTES=len(data) - 1):
+            resp = self.upload(data)
+        self.assertEqual(resp.status_code, 413)
+
+    def test_decompression_bomb_rejected(self):
+        # Small file on the wire, too many pixels once decoded.
+        with self.settings(PROGIMAGE_MAX_PIXELS=100 * 100):
+            resp = self.upload(make_image("PNG", (500, 500)))
+        self.assertEqual(resp.status_code, 413)
+        self.assertEqual(Image.objects.count(), 0)
