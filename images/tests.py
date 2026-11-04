@@ -138,6 +138,17 @@ class ValidationTests(APITestBase):
             resp = self.upload(data)
         self.assertEqual(resp.status_code, 413)
 
+    def test_oversized_request_rejected_from_content_length_before_parsing(self):
+        # The body is never parsed: a tiny, invalid body with a huge declared
+        # Content-Length gets 413, not a 400 about the body's contents.
+        with self.settings(PROGIMAGE_MAX_UPLOAD_BYTES=1000):
+            resp = self.client.generic(
+                "POST", "/api/v1/images", b"not even multipart",
+                content_type="multipart/form-data; boundary=x",
+                CONTENT_LENGTH=str(50 * 1024 * 1024),
+            )
+        self.assertEqual(resp.status_code, 413)
+
     def test_decompression_bomb_rejected(self):
         # Small file on the wire, too many pixels once decoded.
         with self.settings(PROGIMAGE_MAX_PIXELS=100 * 100):
