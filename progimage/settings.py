@@ -21,9 +21,9 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-only-insecure-key")
 
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,testserver").split(",")
 
+
 INSTALLED_APPS = [
-    "django.contrib.contenttypes",
-    "django.contrib.auth",
+    "images",
 ]
 
 MIDDLEWARE = [
