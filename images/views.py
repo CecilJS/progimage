@@ -9,6 +9,7 @@ request to it and shapes the response. Small class-based views are used so
 each endpoint can later declare its own rate-limit scope.
 """
 
+from django.conf import settings
 from django.http import FileResponse
 from rest_framework import status
 from rest_framework.generics import get_object_or_404
@@ -16,11 +17,23 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Image
-from .serializers import ImageSerializer, ImageUploadSerializer
+from .serializers import ImageSerializer, ImageTooLarge, ImageUploadSerializer
+
+# Multipart framing (boundaries, part headers) adds a little on top of the
+# file itself, so allow some slack when judging Content-Length.
+MULTIPART_OVERHEAD_BYTES = 64 * 1024
 
 
 class ImageUploadView(APIView):
     def post(self, request):
+
+        # Reject on the declared size *before* touching request.data.
+        declared = int(request.META.get("CONTENT_LENGTH") or 0)
+        if declared > settings.PROGIMAGE_MAX_UPLOAD_BYTES + MULTIPART_OVERHEAD_BYTES:
+            raise ImageTooLarge(
+                f"Request is {declared} bytes; the limit is "
+                f"{settings.PROGIMAGE_MAX_UPLOAD_BYTES} bytes."
+            )
         serializer = ImageUploadSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         image = serializer.save()

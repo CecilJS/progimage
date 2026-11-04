@@ -51,6 +51,9 @@ class ImageUploadSerializer(serializers.Serializer):
                 f"{settings.PROGIMAGE_MAX_UPLOAD_BYTES} bytes."
             )
 
+         # The view already rejects on Content-Length before the body is read;
+         # this is the exact check on the file itself.
+
         if upload.image.format not in ALLOWED_FORMATS:
             raise UnsupportedImageFormat(
                 f"Format {upload.image.format} is not accepted. "
