@@ -9,6 +9,7 @@ paths are where services usually break.
 import io
 import shutil
 import tempfile
+import uuid
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
@@ -51,6 +52,7 @@ class UploadTests(APITestBase):
         body = resp.json()
         self.assertEqual(body["content_type"], "image/png")
         self.assertEqual((body["width"], body["height"]), (40, 30))
+        self.assertEqual(resp["Location"], body["url"])
         self.assertTrue(Image.objects.filter(pk=body["id"]).exists())
 
     def test_all_supported_formats(self):
@@ -74,6 +76,31 @@ class UploadTests(APITestBase):
 
     def test_wrong_method_rejected(self):
         self.assertEqual(self.client.get("/api/v1/images").status_code, 405)
+
+
+class RetrievalTests(APITestBase):
+    def test_round_trip_returns_identical_bytes(self):
+        data = make_image("JPEG")
+        image_id = self.upload(data, "cat.jpg", "image/jpeg").json()["id"]
+
+        resp = self.client.get(f"/api/v1/images/{image_id}")
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(b"".join(resp.streaming_content), data)
+        self.assertEqual(resp["Content-Type"], "image/jpeg")
+        self.assertEqual(resp["X-Content-Type-Options"], "nosniff")
+
+    def test_unknown_id_returns_404(self):
+        resp = self.client.get(f"/api/v1/images/{uuid.uuid4()}")
+        self.assertEqual(resp.status_code, 404)
+        self.assertIn("detail", resp.json())
+
+    def test_malformed_id_returns_404(self):
+        resp = self.client.get("/api/v1/images/not-a-uuid")
+        self.assertEqual(resp.status_code, 404)
+
+    def test_wrong_method_rejected(self):
+        self.assertEqual(self.client.post(f"/api/v1/images/{uuid.uuid4()}").status_code, 405)
 
 
 class ValidationTests(APITestBase):

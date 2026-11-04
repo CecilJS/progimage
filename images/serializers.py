@@ -6,7 +6,7 @@ ImageField ignores the filename and Content-Type header and opens the
 bytes with Pillow, rejecting anything that isn't a real, intact image.
 We add the checks that are specific to this service on top.
 """
-
+from django.urls import reverse
 from rest_framework import serializers
 from rest_framework.exceptions import APIException
 
@@ -70,6 +70,13 @@ class ImageSerializer(serializers.ModelSerializer):
     """Public shape of an image. Decoupled from the model so internal
     fields (like the storage path) are never exposed."""
 
+    url = serializers.SerializerMethodField()
+
     class Meta:
         model = Image
-        fields = ["id", "content_type", "size_bytes", "width", "height", "created_at"]
+        fields = ["id", "url", "content_type", "size_bytes", "width", "height", "created_at"]
+
+    def get_url(self, image) -> str:
+        return self.context["request"].build_absolute_uri(
+            reverse("image-detail", args=[image.id])
+        )
