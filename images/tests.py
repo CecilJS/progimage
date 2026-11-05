@@ -6,6 +6,7 @@ Pillow, and cover the failure paths as well as the happy path - failure
 paths are where services usually break.
 """
 
+import hashlib
 import io
 import shutil
 import tempfile
@@ -53,12 +54,14 @@ class APITestBase(APITestCase):
 
 class UploadTests(APITestBase):
     def test_upload_returns_id_and_metadata(self):
-        resp = self.upload(make_image("PNG", (40, 30)))
+        data = make_image("PNG", (40, 30))
+        resp = self.upload(data)
 
         self.assertEqual(resp.status_code, 201)
         body = resp.json()
         self.assertEqual(body["content_type"], "image/png")
         self.assertEqual((body["width"], body["height"]), (40, 30))
+        self.assertEqual(body["sha256"], hashlib.sha256(data).hexdigest())
         self.assertEqual(resp["Location"], body["url"])
         self.assertTrue(Image.objects.filter(pk=body["id"]).exists())
 

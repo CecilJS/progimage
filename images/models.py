@@ -19,4 +19,9 @@ class Image(models.Model):
     size_bytes = models.PositiveIntegerField()
     width = models.PositiveIntegerField()
     height = models.PositiveIntegerField()
+    # SHA-256 of the bytes: an integrity checksum and a strong HTTP ETag.
+    # Indexed so it can later drive deduplication.
+    # FUTURE: deduplicate, so identical uploads share one stored file. That
+    # needs reference counting before deletion can be added safely.
+    sha256 = models.CharField(max_length=64, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
