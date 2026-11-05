@@ -19,8 +19,11 @@ python manage.py runserver          # listens on 127.0.0.1:8000 only
 docker build -t progimage .
 docker run -p 127.0.0.1:8000:8000 -e PROGIMAGE_API_KEYS=dev-key -e DJANGO_SECRET_KEY=change-me progimage
 
-# Tests
-python manage.py test        
+# Tests, linting and formatting
+pip install -r requirements-dev.txt
+python manage.py test       
+ruff format .              
+ruff check .                  
 ```
 
 ## API

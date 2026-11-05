@@ -1,0 +1,7 @@
+line-length = 100
+extend-exclude = ["images/migrations"]
+
+[lint]
+# E/W: style errors, F: real bugs (unused imports, undefined names),
+# I: import sorting, B: common bug patterns, UP: modern Python syntax
+select = ["E", "W", "F", "I", "B", "UP"]
