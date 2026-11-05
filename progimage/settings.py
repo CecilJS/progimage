@@ -84,4 +84,15 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ["images.auth.APIKeyAuthentication"],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     "UNAUTHENTICATED_USER": None,
+
+    # Separate budgets per client: uploads (decode + hash + write) cost far
+    # more than reads, so they get a much tighter limit. Clients are keyed by
+    # API key, falling back to IP.
+    # FUTURE: point CACHES at Redis so limits are shared across instances;
+    # the default in-process cache counts per server process.
+    "DEFAULT_THROTTLE_CLASSES": ["rest_framework.throttling.ScopedRateThrottle"],
+    "DEFAULT_THROTTLE_RATES": {
+        "uploads": os.environ.get("PROGIMAGE_UPLOAD_RATE", "30/min"),
+        "reads": os.environ.get("PROGIMAGE_READ_RATE", "600/min"),
+    },
 }

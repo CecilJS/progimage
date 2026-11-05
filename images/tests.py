@@ -10,11 +10,14 @@ import io
 import shutil
 import tempfile
 import uuid
+from unittest import mock
 
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from PIL import Image as PILImage
 from rest_framework.test import APITestCase
+from rest_framework.throttling import ScopedRateThrottle
 
 from .models import Image
 
@@ -35,6 +38,7 @@ class APITestBase(APITestCase):
         super().tearDownClass()
 
     def setUp(self):
+        cache.clear()  # reset rate-limit counters between tests
         self.client.credentials(HTTP_X_API_KEY=API_KEY)
 
     def upload(self, data: bytes, name="photo.png", content_type="image/png"):
@@ -182,3 +186,27 @@ class AuthenticationTests(APITestBase):
     def test_no_keys_configured_fails_closed(self):
         with self.settings(PROGIMAGE_API_KEYS=[]):
             self.assertEqual(self.upload(make_image()).status_code, 401)
+
+
+@mock.patch.object(ScopedRateThrottle, "THROTTLE_RATES", {"uploads": "2/min", "reads": "100/min"})
+class RateLimitTests(APITestBase):
+    def test_upload_limit_returns_429(self):
+        self.upload_and_get_id(make_image())
+        self.upload_and_get_id(make_image())
+        resp = self.upload(make_image())
+        self.assertEqual(resp.status_code, 429)
+        self.assertIn("Retry-After", resp)
+
+    def test_reads_have_their_own_budget(self):
+        image_id = self.upload_and_get_id(make_image())
+        self.upload_and_get_id(make_image())
+        self.assertEqual(self.upload(make_image()).status_code, 429)
+        # Uploads are exhausted, but reads still work.
+        self.assertEqual(self.client.get(f"/api/v1/images/{image_id}").status_code, 200)
+
+    def test_limits_are_per_client(self):
+        self.upload_and_get_id(make_image())
+        self.upload_and_get_id(make_image())
+        self.assertEqual(self.upload(make_image()).status_code, 429)
+        self.client.credentials(HTTP_X_API_KEY="other-key")
+        self.assertEqual(self.upload(make_image()).status_code, 201)
