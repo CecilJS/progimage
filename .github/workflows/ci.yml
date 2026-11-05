@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
 
 jobs:
@@ -20,7 +20,12 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements-dev.txt
+
+      - name: Lint and check formatting
+        run: |
+            ruff check .
+            ruff format --check .
 
       - name: Check for missing migrations
         run: python manage.py makemigrations --check --dry-run

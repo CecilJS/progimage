@@ -4,7 +4,8 @@ ProgImage settings.
 Kept to a single file for simplicity. Secrets and environment-specific
 values come from environment variables, so the same code runs anywhere.
 
-FUTURE: If I had more time I would split this into settings/base.py, dev.py, test.py, prod.py to ensure that as the
+FUTURE: If I had more time I would split this into settings/base.py, dev.py,
+test.py, prod.py to ensure that as the
 environments diverges, I don't have a growing `if DEBUG:` branches here.
 """
 
@@ -85,7 +86,9 @@ PROGIMAGE_MAX_PIXELS = int(os.environ.get("PROGIMAGE_MAX_PIXELS", 40_000_000))
 
 # API keys for calling services, comma-separated. If none are configured,
 # every request is refused: the service fails closed, never open.
-PROGIMAGE_API_KEYS = [k.strip() for k in os.environ.get("PROGIMAGE_API_KEYS", "").split(",") if k.strip()]
+PROGIMAGE_API_KEYS = [
+    k.strip() for k in os.environ.get("PROGIMAGE_API_KEYS", "").split(",") if k.strip()
+]
 
 # --- CONFIG for Django REST framework ---------------------------------------------------
 REST_FRAMEWORK = {
@@ -93,12 +96,10 @@ REST_FRAMEWORK = {
     # machine-to-machine service.
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.MultiPartParser"],
-
     # Header-based API keys. No cookies or sessions, so CSRF doesn't apply.
     "DEFAULT_AUTHENTICATION_CLASSES": ["images.auth.APIKeyAuthentication"],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     "UNAUTHENTICATED_USER": None,
-
     # Separate budgets per client: uploads (decode + hash + write) cost far
     # more than reads, so they get a much tighter limit. Clients are keyed by
     # API key, falling back to IP.

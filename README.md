@@ -1,4 +1,9 @@
 # ProgImage
+[![CI](https://github.com/CecilJS/progimage/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/CecilJS/progimage/actions/workflows/ci.yml)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+![Python 3.14](https://img.shields.io/badge/python-3.14-blue)
+![Django 5.2](https://img.shields.io/badge/django-5.2-green)
+![DRF](https://img.shields.io/badge/DRF-3.15%2B-red)
 
 A small Django REST framework service that stores images and returns them by id.
 It's API-only, and intended to be called by other applications.
@@ -19,8 +24,11 @@ python manage.py runserver          # listens on 127.0.0.1:8000 only
 docker build -t progimage .
 docker run -p 127.0.0.1:8000:8000 -e PROGIMAGE_API_KEYS=dev-key -e DJANGO_SECRET_KEY=change-me progimage
 
-# Tests
-python manage.py test        
+# Tests, linting and formatting
+pip install -r requirements-dev.txt
+python manage.py test       
+ruff format .              
+ruff check .                  
 ```
 
 ## API
