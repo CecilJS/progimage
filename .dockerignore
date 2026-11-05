@@ -1,0 +1,10 @@
+.git
+__pycache__
+*.pyc
+db.sqlite3
+media/
+.env
+.venv
+
+ .idea
+ .DS_Store
