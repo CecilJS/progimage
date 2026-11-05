@@ -9,15 +9,19 @@ request to it and shapes the response. Small class-based views are used so
 each endpoint can declare its own rate-limit scope.
 """
 
+import logging
 from django.conf import settings
 from django.http import FileResponse, HttpResponseNotModified
 from rest_framework import status
+from rest_framework.exceptions import NotFound
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Image
 from .serializers import ImageSerializer, ImageTooLarge, ImageUploadSerializer
+
+logger = logging.getLogger(__name__)
 
 # Multipart framing (boundaries, part headers) adds a little on top of the
 # file itself, so allow some slack when judging Content-Length.
@@ -62,9 +66,19 @@ class ImageDetailView(APIView):
         if etag_matches(request.headers.get("If-None-Match", ""), etag):
             response = HttpResponseNotModified()
         else:
+            try:
+                stream = image.file.open("rb")
+            except FileNotFoundError:
+                # The row exists but its bytes don't: an integrity problem worth
+                # alerting on, but the client should get a clean 404, not a 500.
+                # FUTURE: other storage backends (e.g. S3) raise their own errors;
+                # map those too, and return 503 when storage is unreachable.
+                logger.error("Stored file missing for image %s", image.id)
+                raise NotFound("Image not found.") from None
+
             # FileResponse streams the file in chunks, so memory use stays
             # flat however large the image is.
-            response = FileResponse(image.file.open("rb"), content_type=image.content_type)
+            response = FileResponse(stream, content_type=image.content_type)
 
         for name, value in cache_headers.items():
             response[name] = value

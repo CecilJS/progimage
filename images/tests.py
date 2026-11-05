@@ -84,6 +84,15 @@ class UploadTests(APITestBase):
         image = Image.objects.get(pk=resp.json()["id"])
         self.assertEqual(image.file.name, f"images/{image.id}.png")
 
+    def test_missing_stored_file_returns_404_not_500(self):
+        image_id = self.upload_and_get_id(make_image())
+        # Delete the bytes from storage but keep the database row.
+        Image.objects.get(pk=image_id).file.delete(save=False)
+
+        with self.assertLogs("images.views", level="ERROR"):
+            resp = self.client.get(f"/api/v1/images/{image_id}")
+        self.assertEqual(resp.status_code, 404)
+
     def test_wrong_method_rejected(self):
         self.assertEqual(self.client.get("/api/v1/images").status_code, 405)
 
