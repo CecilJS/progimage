@@ -9,15 +9,29 @@ environments diverges, I don't have a growing `if DEBUG:` branches here.
 """
 
 import os
+import sys
 from pathlib import Path
+
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 DEBUG = os.environ.get("DJANGO_DEBUG", "false").lower() == "true"
 
-# Never hard-code a production secret. The fallback only exists so the
-# project runs out of the box in local development.
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-only-insecure-key")
+# True while `python manage.py test` is running.
+TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
+
+# A throwaway key is allowed only in
+# debug mode and in tests; anywhere else, refuse to start without a real one
+# (fail closed, like the API keys).
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
+if not SECRET_KEY:
+    if DEBUG or TESTING:
+        SECRET_KEY = "dev-only-insecure-key"
+    else:
+        raise ImproperlyConfigured(
+            "Set DJANGO_SECRET_KEY, or DJANGO_DEBUG=true for local development."
+        )
 
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,testserver").split(",")
 
