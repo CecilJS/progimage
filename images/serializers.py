@@ -6,6 +6,7 @@ ImageField ignores the filename and Content-Type header and opens the
 bytes with Pillow, rejecting anything that isn't a real, intact image.
 We add the checks that are specific to this service on top.
 """
+import hashlib
 from django.conf import settings
 from django.urls import reverse
 from rest_framework import serializers
@@ -35,6 +36,16 @@ class UnsupportedImageFormat(APIException):
     status_code = 415
     default_detail = "Image format not supported."
     default_code = "unsupported_image_format"
+
+
+def sha256_of(upload) -> str:
+    """Hash in 64 KB chunks, so memory use is constant whatever the file size."""
+    digest = hashlib.sha256()
+    upload.seek(0)
+    for chunk in upload.chunks(64 * 1024):
+        digest.update(chunk)
+    upload.seek(0)  # leave the file ready to be saved
+    return digest.hexdigest()
 
 
 class ImageUploadSerializer(serializers.Serializer):
@@ -79,6 +90,7 @@ class ImageUploadSerializer(serializers.Serializer):
             size_bytes=upload.size,
             width=width,
             height=height,
+            sha256=sha256_of(upload),
         )
         # Writes the bytes through the configured storage backend, then the row.
         # FUTURE: catch storage errors and return 503, rather than a generic 500.
@@ -94,7 +106,7 @@ class ImageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Image
-        fields = ["id", "url", "content_type", "size_bytes", "width", "height", "created_at"]
+        fields = ["id", "url", "content_type", "size_bytes", "width", "height", "sha256", "created_at"]
 
     def get_url(self, image) -> str:
         return self.context["request"].build_absolute_uri(
