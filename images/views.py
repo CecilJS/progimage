@@ -6,7 +6,7 @@ GET  /api/v1/images/<id>     download the image
 
 Views stay thin: the serializer validates and saves; the view connects the
 request to it and shapes the response. Small class-based views are used so
-each endpoint can later declare its own rate-limit scope.
+each endpoint can declare its own rate-limit scope.
 """
 
 from django.conf import settings
@@ -25,6 +25,7 @@ MULTIPART_OVERHEAD_BYTES = 64 * 1024
 
 
 class ImageUploadView(APIView):
+    throttle_scope = "uploads"
     def post(self, request):
 
         # Reject on the declared size *before* touching request.data.
@@ -43,6 +44,7 @@ class ImageUploadView(APIView):
 
 
 class ImageDetailView(APIView):
+    throttle_scope = "reads"
     def get(self, request, image_id):
         # DRF turns a missing row into a JSON 404 automatically.
         image = get_object_or_404(Image, pk=image_id)
