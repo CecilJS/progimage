@@ -10,6 +10,7 @@ each endpoint can declare its own rate-limit scope.
 """
 
 import logging
+
 from django.conf import settings
 from django.http import FileResponse, HttpResponseNotModified
 from rest_framework import status
@@ -30,6 +31,7 @@ MULTIPART_OVERHEAD_BYTES = 64 * 1024
 
 class ImageUploadView(APIView):
     throttle_scope = "uploads"
+
     def post(self, request):
 
         # Reject on the declared size *before* touching request.data.
@@ -49,6 +51,7 @@ class ImageUploadView(APIView):
 
 class ImageDetailView(APIView):
     throttle_scope = "reads"
+
     def get(self, request, image_id):
         # DRF turns a missing row into a JSON 404 automatically.
         image = get_object_or_404(Image, pk=image_id)
@@ -84,12 +87,14 @@ class ImageDetailView(APIView):
             response[name] = value
         return response
 
+
 def etag_matches(if_none_match: str, etag: str) -> bool:
     """True if any tag in an If-None-Match header matches (or it is "*")."""
     if if_none_match.strip() == "*":
         return True
     tags = {tag.strip().removeprefix("W/") for tag in if_none_match.split(",")}
     return etag in tags
+
 
 # FUTURE: GET /api/v1/images/<id>/metadata (dimensions, size, type without
 # downloading the bytes) and DELETE /api/v1/images/<id>.

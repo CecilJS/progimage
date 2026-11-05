@@ -6,7 +6,9 @@ ImageField ignores the filename and Content-Type header and opens the
 bytes with Pillow, rejecting anything that isn't a real, intact image.
 We add the checks that are specific to this service on top.
 """
+
 import hashlib
+
 from django.conf import settings
 from django.urls import reverse
 from rest_framework import serializers
@@ -23,6 +25,7 @@ ALLOWED_FORMATS = {
     "GIF": ("image/gif", "gif"),
     "WEBP": ("image/webp", "webp"),
 }
+
 
 # Custom exceptions let us return precise status codes instead of a generic
 # 400, so callers know whether to shrink the file or convert it.
@@ -62,8 +65,8 @@ class ImageUploadSerializer(serializers.Serializer):
                 f"{settings.PROGIMAGE_MAX_UPLOAD_BYTES} bytes."
             )
 
-         # The view already rejects on Content-Length before the body is read;
-         # this is the exact check on the file itself.
+        # The view already rejects on Content-Length before the body is read;
+        # this is the exact check on the file itself.
 
         if upload.image.format not in ALLOWED_FORMATS:
             raise UnsupportedImageFormat(
@@ -106,9 +109,16 @@ class ImageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Image
-        fields = ["id", "url", "content_type", "size_bytes", "width", "height", "sha256", "created_at"]
+        fields = [
+            "id",
+            "url",
+            "content_type",
+            "size_bytes",
+            "width",
+            "height",
+            "sha256",
+            "created_at",
+        ]
 
     def get_url(self, image) -> str:
-        return self.context["request"].build_absolute_uri(
-            reverse("image-detail", args=[image.id])
-        )
+        return self.context["request"].build_absolute_uri(reverse("image-detail", args=[image.id]))

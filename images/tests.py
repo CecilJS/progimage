@@ -25,6 +25,7 @@ from .models import Image
 TEMP_MEDIA = tempfile.mkdtemp()
 API_KEY = "test-key"
 
+
 def make_image(fmt="PNG", size=(40, 30)) -> bytes:
     buf = io.BytesIO()
     PILImage.new("RGB", size, (200, 30, 30)).save(buf, format=fmt)
@@ -66,8 +67,12 @@ class UploadTests(APITestBase):
         self.assertTrue(Image.objects.filter(pk=body["id"]).exists())
 
     def test_all_supported_formats(self):
-        for fmt, mime in [("PNG", "image/png"), ("JPEG", "image/jpeg"),
-                          ("GIF", "image/gif"), ("WEBP", "image/webp")]:
+        for fmt, mime in [
+            ("PNG", "image/png"),
+            ("JPEG", "image/jpeg"),
+            ("GIF", "image/gif"),
+            ("WEBP", "image/webp"),
+        ]:
             with self.subTest(fmt=fmt):
                 resp = self.upload(make_image(fmt))
                 self.assertEqual(resp.status_code, 201)
@@ -162,7 +167,9 @@ class ValidationTests(APITestBase):
         # Content-Length gets 413, not a 400 about the body's contents.
         with self.settings(PROGIMAGE_MAX_UPLOAD_BYTES=1000):
             resp = self.client.generic(
-                "POST", "/api/v1/images", b"not even multipart",
+                "POST",
+                "/api/v1/images",
+                b"not even multipart",
                 content_type="multipart/form-data; boundary=x",
                 CONTENT_LENGTH=str(50 * 1024 * 1024),
             )
