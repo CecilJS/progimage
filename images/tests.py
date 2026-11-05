@@ -167,6 +167,30 @@ class ValidationTests(APITestBase):
         self.assertEqual(Image.objects.count(), 0)
 
 
+class CachingTests(APITestBase):
+    def setUp(self):
+        super().setUp()
+        self.data = make_image()
+        self.image_id = self.upload_and_get_id(self.data)
+        self.etag = f'"{hashlib.sha256(self.data).hexdigest()}"'
+
+    def test_response_has_etag_and_long_cache_lifetime(self):
+        resp = self.client.get(f"/api/v1/images/{self.image_id}")
+        self.assertEqual(resp["ETag"], self.etag)
+        self.assertIn("immutable", resp["Cache-Control"])
+
+    def test_matching_etag_returns_empty_304(self):
+        for header in [self.etag, f"W/{self.etag}", f'"stale", {self.etag}', "*"]:
+            with self.subTest(header=header):
+                resp = self.client.get(f"/api/v1/images/{self.image_id}", HTTP_IF_NONE_MATCH=header)
+                self.assertEqual(resp.status_code, 304)
+                self.assertEqual(resp.content, b"")
+                self.assertEqual(resp["ETag"], self.etag)
+
+    def test_stale_etag_returns_full_image(self):
+        resp = self.client.get(f"/api/v1/images/{self.image_id}", HTTP_IF_NONE_MATCH='"stale"')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(b"".join(resp.streaming_content), self.data)
 
 
 class AuthenticationTests(APITestBase):
