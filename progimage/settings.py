@@ -69,6 +69,9 @@ PROGIMAGE_MAX_UPLOAD_BYTES = int(os.environ.get("PROGIMAGE_MAX_UPLOAD_BYTES", 10
 # dimensions and would exhaust memory if decoded.
 PROGIMAGE_MAX_PIXELS = int(os.environ.get("PROGIMAGE_MAX_PIXELS", 40_000_000))
 
+# API keys for calling services, comma-separated. If none are configured,
+# every request is refused: the service fails closed, never open.
+PROGIMAGE_API_KEYS = [k.strip() for k in os.environ.get("PROGIMAGE_API_KEYS", "").split(",") if k.strip()]
 
 # --- CONFIG for Django REST framework ---------------------------------------------------
 REST_FRAMEWORK = {
@@ -76,9 +79,9 @@ REST_FRAMEWORK = {
     # machine-to-machine service.
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.MultiPartParser"],
-    # No authentication yet (this is a deliberate decision at this stage, will add soon). With no session
-    # authentication, DRF doesn't enforce CSRF, which only applies to cookies.
-    "DEFAULT_AUTHENTICATION_CLASSES": [],
-    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
+
+    # Header-based API keys. No cookies or sessions, so CSRF doesn't apply.
+    "DEFAULT_AUTHENTICATION_CLASSES": ["images.auth.APIKeyAuthentication"],
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     "UNAUTHENTICATED_USER": None,
 }
