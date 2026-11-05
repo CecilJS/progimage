@@ -19,7 +19,7 @@ from rest_framework.test import APITestCase
 from .models import Image
 
 TEMP_MEDIA = tempfile.mkdtemp()
-
+API_KEY = "test-key"
 
 def make_image(fmt="PNG", size=(40, 30)) -> bytes:
     buf = io.BytesIO()
@@ -27,12 +27,15 @@ def make_image(fmt="PNG", size=(40, 30)) -> bytes:
     return buf.getvalue()
 
 
-@override_settings(MEDIA_ROOT=TEMP_MEDIA)
+@override_settings(MEDIA_ROOT=TEMP_MEDIA, PROGIMAGE_API_KEYS=[API_KEY, "other-key"])
 class APITestBase(APITestCase):
     @classmethod
     def tearDownClass(cls):
         shutil.rmtree(TEMP_MEDIA, ignore_errors=True)
         super().tearDownClass()
+
+    def setUp(self):
+        self.client.credentials(HTTP_X_API_KEY=API_KEY)
 
     def upload(self, data: bytes, name="photo.png", content_type="image/png"):
         file = SimpleUploadedFile(name, data, content_type=content_type)
@@ -155,3 +158,27 @@ class ValidationTests(APITestBase):
             resp = self.upload(make_image("PNG", (500, 500)))
         self.assertEqual(resp.status_code, 413)
         self.assertEqual(Image.objects.count(), 0)
+
+
+
+
+class AuthenticationTests(APITestBase):
+    def test_missing_key_returns_401(self):
+        self.client.credentials()  # no key
+        resp = self.upload(make_image())
+        self.assertEqual(resp.status_code, 401)
+        self.assertEqual(resp["WWW-Authenticate"], "X-API-Key")
+        self.assertEqual(Image.objects.count(), 0)
+
+    def test_wrong_key_returns_401(self):
+        self.client.credentials(HTTP_X_API_KEY="guess")
+        self.assertEqual(self.upload(make_image()).status_code, 401)
+
+    def test_reads_also_require_a_key(self):
+        image_id = self.upload_and_get_id(make_image())
+        self.client.credentials()
+        self.assertEqual(self.client.get(f"/api/v1/images/{image_id}").status_code, 401)
+
+    def test_no_keys_configured_fails_closed(self):
+        with self.settings(PROGIMAGE_API_KEYS=[]):
+            self.assertEqual(self.upload(make_image()).status_code, 401)
